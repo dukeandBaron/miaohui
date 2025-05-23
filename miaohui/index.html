@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>妙绘 - 主界面与主绘板</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            font-family: '微软雅黑', Arial, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+        }
+        .page {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+            background: #f5f5f5;
+        }
+        .page.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .main-img-container {
+            position: relative;
+            max-width: 80vw;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        .main-img-container img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .drawing-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #f5f5f5;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .top-bar {
+            height: 10vh;
+            background: linear-gradient(to right, #e0b0ff, #c0d0ff);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 30;
+        }
+        .top-bar .back-icon {
+            font-size: 2em;
+            color: #fff;
+            margin-right: 20px;
+            cursor: pointer;
+        }
+        .top-bar .avatar-selector {
+            position: relative;
+            margin-right: 20px;
+        }
+        .top-bar .small-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #666;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .top-bar .small-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .top-bar .avatar-selector input[type="file"] {
+            display: none;
+        }
+        .top-bar .ai-prompt-input {
+            flex-grow: 1;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 25px;
+            background-color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1em;
+            color: #333;
+            outline: none;
+            margin-right: 15px;
+        }
+        .top-bar .title {
+            font-size: 1.5em;
+            color: #fff;
+            margin-right: auto;
+            font-weight: bold;
+        }
+        .top-bar .settings-icon {
+            font-size: 2em;
+            color: #fff;
+            cursor: pointer;
+        }
+        .main-content-area {
+            flex-grow: 1;
+            display: flex;
+            position: relative;
+        }
+        .left-nav-sidebar {
+            width: 60px;
+            background-color: #f0f0f0;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            z-index: 20;
+        }
+        .left-nav-sidebar .nav-item {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: #666;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .left-nav-sidebar .nav-item:hover {
+            background-color: #d0d0d0;
+            transform: scale(1.05);
+        }
+        .left-nav-sidebar .nav-item.active {
+            background-color: #6a8dff;
+            color: #fff;
+        }
+        .sticker-panel {
+            width: 200px;
+            background-color: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            z-index: 20;
+        }
+        .sticker-panel .search-bar-container {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 5px 10px;
+            background-color: #f5f5f5;
+        }
+        .sticker-panel .search-bar {
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            background: transparent;
+            font-size: 0.9em;
+        }
+        .sticker-panel .search-icon {
+            font-size: 1.2em;
+            color: #999;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .sticker-panel .sticker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .sticker-panel .sticker-item {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+        }
+        .sticker-panel .sticker-item:hover {
+            transform: scale(1.05);
+        }
+        .sticker-panel .sticker-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-width: 60px;
+            max-height: 60px;
+        }
+        .canvas-area {
+            flex-grow: 1;
+            position: relative;
+            background-color: #fff;
+            background-image: radial-gradient(circle, #ddd 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 10px;
+            margin: 20px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drawing-canvas {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            cursor: default;
+            z-index: 5;
+        }
+        .drawing-canvas.brush-tool,
+        .drawing-canvas.pen-tool,
+        .drawing-canvas.marker-tool {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>') 0 32, crosshair;
+        }
+        .drawing-canvas.eraser-tool {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9l6 6"/><path d="M15 9l-6 6"/></svg>') 0 32, crosshair;
+        }
+        .drawing-canvas.text-tool {
+            cursor: text;
+        }
+        .drawing-canvas.pan-tool {
+            cursor: grab;
+        }
+        .drawing-canvas.pan-tool:active {
+            cursor: grabbing;
+        }
+        .drawing-canvas.shape-tool,
+        .drawing-canvas.line-tool {
+            cursor: crosshair;
+        }
+        .right-toolbar {
+            width: 70px;
+            background-color: #fff;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 15px;
+            padding-bottom: 80px;
+            position: relative;
+            z-index: 20;
+        }
+        .right-toolbar .tool-item {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: #666;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            position: relative;
+        }
+        .right-toolbar .tool-item:hover {
+            background-color: #d0d0d0;
+            transform: scale(1.05);
+        }
+        .right-toolbar .tool-item.active {
+            background-color: #6a8dff;
+            color: #fff;
+        }
+        .color-thickness-controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            position: absolute;
+            bottom: 10px;
+            z-index: 15;
+            background-color: #fff;
+        }
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .thickness-slider {
+            width: 80%;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .thickness-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #6a8dff;
+            cursor: pointer;
+        }
+        .thickness-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #6a8dff;
+            cursor: pointer;
+        }
+        .drawing-tool-sub-menu {
+            position: absolute;
+            right: 80px;
+            top: 250px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 25;
+            min-width: 120px;
+        }
+        .drawing-tool-sub-menu button {
+            padding: 8px 15px;
+            font-size: 1em;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            transition: background-color 0.2s;
+            text-align: left;
+        }
+        .drawing-tool-sub-menu button:hover {
+            background-color: #d0d0d0;
+        }
+        .drawing-tool-sub-menu button.selected {
+            background-color: #6a8dff;
+            color: #fff;
+        }
+        .text-input-overlay {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ccc;
+            padding: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 35;
+            display: none;
+            border-radius: 8px;
+            resize: both;
+            overflow: hidden;
+        }
+        .text-input-overlay textarea {
+            width: 200px;
+            height: 50px;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 16px;
+            font-family: '微软雅黑', Arial, sans-serif;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        .text-input-overlay button {
+            margin-top: 5px;
+            padding: 5px 10px;
+            border: none;
+            background-color: #6a8dff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="mainPage" class="page active">
+            <div class="main-img-container" onclick="switchToDraw()">
+                <img src="main-interface.jpg" alt="主界面">
+            </div>
+        </div>
+        <div id="drawPage" class="page">
+            <div class="drawing-container">
+                <div class="top-bar">
+                    <div class="back-icon" onclick="switchToMain()">⬅️</div>
+                    <div class="avatar-selector">
+                        <label for="avatarUpload">
+                            <div class="small-avatar" id="avatarDisplay">👦</div>
+                        </label>
+                        <input type="file" id="avatarUpload" accept="image/*">
+                    </div>
+                    <input type="text" placeholder="输入提示词，AI可以辅助绘画！" class="ai-prompt-input">
+                    <div class="title">我的第一幅画</div>
+                    <div class="settings-icon">⚙️</div>
+                </div>
+                <div class="main-content-area">
+                    <div class="left-nav-sidebar">
+                        <div class="nav-item active" onclick="showStickerPanel(false)">🏠</div>
+                        <div class="nav-item" onclick="showStickerPanel(false)">🖌️</div>
+                        <div class="nav-item" onclick="showStickerPanel(true)">✨</div>
+                        <div class="nav-item" onclick="handleStory()">📖</div>
+                    </div>
+                    <div id="stickerPanel" class="sticker-panel">
+                        <div class="search-bar-container">
+                            <input type="text" placeholder="查找贴图..." class="search-bar">
+                            <span class="search-icon">🔍</span>
+                        </div>
+                        <div class="sticker-grid">
+                            <div class="sticker-item" onclick="addSticker('https://via.placeholder.com/60/FFD700/FFFFFF?text=Moon')"><img src="https://via.placeholder.com/60/FFD700/FFFFFF?text=Moon" alt="月亮"></div>
+                            <div class="sticker-item" onclick="addSticker('https://via.placeholder.com/60/ADD8E6/FFFFFF?text=Water')"><img src="https://via.placeholder.com/60/ADD8E6/FFFFFF?text=Water" alt="水花"></div>
+                            <div class="sticker-item" onclick="addSticker('https://via.placeholder.com/60/FF6347/FFFFFF?text=Rainbow')"><img src="https://via.placeholder.com/60/FF6347/FFFFFF?text=Rainbow" alt="彩虹"></div>
+                            <div class="sticker-item" onclick="addSticker('https://via.placeholder.com/60/DAA520/FFFFFF?text=Star')"><img src="https://via.placeholder.com/60/DAA520/FFFFFF?text=Star" alt="星星"></div>
+                            <div class="sticker-item" onclick="addSticker('https://via.placeholder.com/60/90EE90/FFFFFF?text=Flowers')"><img src="https://via.placeholder.com/60/90EE90/FFFFFF?text=Flowers" alt="鲜花"></div>
+                            <div class="sticker-item" onclick="addSticker('https://via.placeholder.com/60/FFFF00/000000?text=Sun')"><img src="https://via.placeholder.com/60/FFFF00/000000?text=Sun" alt="太阳"></div>
+                        </div>
+                    </div>
+                    <div class="canvas-area">
+                        <canvas id="drawingCanvas" class="drawing-canvas"></canvas>
+                    </div>
+                    <div id="rightToolbar" class="right-toolbar">
+                        <div class="tool-item" onclick="selectTool('pan')">✋</div>
+                        <div class="tool-item" onclick="toggleDrawingToolSubMenu()">🖊️</div>
+                        <div class="tool-item" onclick="selectTool('shape')">⬛</div>
+                        <div class="tool-item" onclick="selectTool('line')">📏</div>
+                        <div class="tool-item" onclick="saveCanvas()">💾</div>
+                        <div class="tool-item" onclick="selectTool('text')">🅰️</div>
+                        <div class="tool-item" onclick="handleAllWorks()">🖼️</div>
+                        <div class="color-thickness-controls">
+                            <input type="color" id="colorPicker" class="color-picker" value="#000000">
+                            <input type="range" id="thicknessSlider" class="thickness-slider" min="1" max="30" value="2">
+                        </div>
+                    </div>
+                    <div id="drawingToolSubMenu" class="drawing-tool-sub-menu">
+                        <button id="brushPen" onclick="selectTool('brush')">画笔</button>
+                        <button id="pencilPen" onclick="selectTool('pen', 1)">铅笔</button>
+                        <button id="markerPenThin" onclick="selectTool('marker', 5)">记号笔</button>
+                        <button id="markerPenThick" onclick="selectTool('marker', 15)">马克笔</button>
+                        <button id="eraserToolBtn" onclick="selectTool('eraser')">橡皮</button>
+                    </div>
+                    <div id="textInputOverlay" class="text-input-overlay">
+                        <textarea id="textInput" placeholder="输入文字..."></textarea>
+                        <button onclick="drawTextOnCanvas()">确定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let canvas;
+        let ctx;
+        let isDrawing = false;
+        let currentTool = 'brush';
+        let currentPenSize = 2;
+        let currentPenColor = '#000000';
+        let lastX = 0;
+        let lastY = 0;
+        let isPanning = false;
+        let startPanX, startPanY;
+        let translateX = 0;
+        let translateY = 0;
+        let textInputOverlay;
+        let textInput;
+        let textDrawX, textDrawY;
+        let startShapeX, startShapeY;
+        const canvasHistory = [];
+        let historyIndex = -1;
+
+        function switchToDraw() {
+            console.log("switchToDraw 被调用: 进入主绘板页面。");
+            document.getElementById('mainPage').classList.remove('active');
+            document.getElementById('drawPage').classList.add('active');
+            setTimeout(initCanvas, 100);
+        }
+
+        function switchToMain() {
+            console.log("switchToMain 被调用: 返回主页面。");
+            document.getElementById('drawPage').classList.remove('active');
+            document.getElementById('mainPage').classList.add('active');
+        }
+
+        window.onload = function() {
+            console.log("页面已加载。");
+            document.getElementById('mainPage').classList.add('active');
+            document.getElementById('drawPage').classList.remove('active');
+
+            const avatarUpload = document.getElementById('avatarUpload');
+            const avatarDisplay = document.getElementById('avatarDisplay');
+
+            avatarUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.borderRadius = '50%';
+                        img.style.objectFit = 'cover';
+                        avatarDisplay.innerHTML = '';
+                        avatarDisplay.appendChild(img);
+                        console.log("用户已上传新头像。");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        };
+
+        function initCanvas() {
+            canvas = document.getElementById('drawingCanvas');
+            if (!ctx) {
+                ctx = canvas.getContext('2d');
+                canvas.addEventListener('mousedown', canvasMouseDown);
+                canvas.addEventListener('mousemove', canvasMouseMove);
+                canvas.addEventListener('mouseup', canvasMouseUp);
+                canvas.addEventListener('mouseout', canvasMouseUp);
+            }
+
+            const canvasArea = document.querySelector('.canvas-area');
+            const canvasAspectRatio = 4 / 3;
+            let canvasWidth = canvasArea.clientWidth * 0.9;
+            let canvasHeight = canvasWidth / canvasAspectRatio;
+            if (canvasHeight > canvasArea.clientHeight * 0.9) {
+                canvasHeight = canvasArea.clientHeight * 0.9;
+                canvasWidth = canvasHeight * canvasAspectRatio;
+            }
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            canvas.style.width = `${canvasWidth}px`;
+            canvas.style.height = `${canvasHeight}px`;
+
+            ctx.strokeStyle = currentPenColor;
+            ctx.lineWidth = currentPenSize;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            saveCanvasState();
+
+            textInputOverlay = document.getElementById('textInputOverlay');
+            textInput = document.getElementById('textInput');
+
+            document.getElementById('colorPicker').addEventListener('input', (e) => {
+                currentPenColor = e.target.value;
+                ctx.strokeStyle = currentPenColor;
+                ctx.fillStyle = currentPenColor;
+                console.log("颜色已更新为:", currentPenColor);
+            });
+
+            document.getElementById('thicknessSlider').addEventListener('input', (e) => {
+                currentPenSize = parseInt(e.target.value);
+                ctx.lineWidth = currentPenSize;
+                console.log("画笔粗细已更新为:", currentPenSize);
+            });
+
+            selectTool('brush');
+            window.addEventListener('resize', initCanvas);
+        }
+
+        function saveCanvasState() {
+            if (historyIndex < canvasHistory.length - 1) {
+                canvasHistory.splice(historyIndex + 1);
+            }
+            canvasHistory.push(canvas.toDataURL());
+            historyIndex++;
+            console.log("画布状态已保存。历史记录长度:", canvasHistory.length, "当前索引:", historyIndex);
+            const MAX_HISTORY = 20;
+            if (canvasHistory.length > MAX_HISTORY) {
+                canvasHistory.shift();
+                historyIndex--;
+            }
+        }
+
+        function undoCanvas() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreCanvasFromHistory();
+                console.log("已撤销。当前历史索引:", historyIndex);
+            }
+        }
+
+        function redoCanvas() {
+            if (historyIndex < canvasHistory.length - 1) {
+                historyIndex++;
+                restoreCanvasFromHistory();
+                console.log("已重做。当前历史索引:", historyIndex);
+            }
+        }
+
+        function restoreCanvasFromHistory() {
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = canvasHistory[historyIndex];
+        }
+
+        function selectTool(tool, size = null) {
+            currentTool = tool;
+            canvas.className = 'drawing-canvas ' + tool + '-tool';
+            const toolItems = document.querySelectorAll('.right-toolbar .tool-item');
+            toolItems.forEach(item => item.classList.remove('active'));
+            if (tool === 'pan') document.querySelector('.tool-item:nth-child(1)').classList.add('active');
+            else if (tool === 'shape') document.querySelector('.tool-item:nth-child(3)').classList.add('active');
+            else if (tool === 'line') document.querySelector('.tool-item:nth-child(4)').classList.add('active');
+            else if (tool === 'save') document.querySelector('.tool-item:nth-child(5)').classList.add('active');
+            else if (tool === 'text') document.querySelector('.tool-item:nth-child(6)').classList.add('active');
+            else if (tool === 'allWorks') document.querySelector('.tool-item:nth-child(7)').classList.add('active');
+
+            if (tool !== 'text') {
+                hideTextInputOverlay();
+                canvas.removeEventListener('click', handleCanvasClickForText);
+            } else {
+                canvas.addEventListener('click', handleCanvasClickForText);
+            }
+
+            if (tool === 'eraser') {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 20;
+            } else {
+                ctx.strokeStyle = currentPenColor;
+                ctx.lineWidth = currentPenSize;
+            }
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const drawingToolSubMenu = document.getElementById('drawingToolSubMenu');
+            const penButtons = drawingToolSubMenu.querySelectorAll('button');
+            penButtons.forEach(button => {
+                button.classList.remove('selected');
+                if (
+                    (tool === 'brush' && button.id === 'brushPen') ||
+                    (tool === 'pen' && size === 1 && button.id === 'pencilPen') ||
+                    (tool === 'marker' && size === 5 && button.id === 'markerPenThin') ||
+                    (tool === 'marker' && size === 15 && button.id === 'markerPenThick') ||
+                    (tool === 'eraser' && button.id === 'eraserToolBtn')
+                ) {
+                    button.classList.add('selected');
+                }
+            });
+            if (tool === 'brush' || tool === 'pen' || tool === 'marker' || tool === 'eraser') {
+                document.querySelector('.tool-item:nth-child(2)').classList.add('active');
+            }
+            console.log("当前工具设置为:", currentTool);
+        }
+
+        function toggleDrawingToolSubMenu() {
+            selectTool('brush');
+        }
+
+        function canvasMouseDown(e) {
+            if (e.button === 0) {
+                const pos = getMousePos(canvas, e);
+                lastX = pos.x;
+                lastY = pos.y;
+                if (currentTool === 'brush' || currentTool === 'pen' || currentTool === 'marker' || currentTool === 'eraser') {
+                    isDrawing = true;
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                } else if (currentTool === 'pan') {
+                    isPanning = true;
+                    startPanX = e.clientX;
+                    startPanY = e.clientY;
+                    canvas.style.cursor = 'grabbing';
+                } else if (currentTool === 'shape' || currentTool === 'line') {
+                    startShapeX = lastX;
+                    startShapeY = lastY;
+                    isDrawing = true;
+                    saveCanvasState();
+                }
+            }
+        }
+
+        function canvasMouseMove(e) {
+            const pos = getMousePos(canvas, e);
+            if (isDrawing) {
+                if (currentTool === 'brush' || currentTool === 'pen' || currentTool === 'marker' || currentTool === 'eraser') {
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                } else if (currentTool === 'shape') {
+                    restoreCanvasFromHistory();
+                    ctx.beginPath();
+                    ctx.rect(startShapeX, startShapeY, pos.x - startShapeX, pos.y - startShapeY);
+                    ctx.stroke();
+                } else if (currentTool === 'line') {
+                    restoreCanvasFromHistory();
+                    ctx.beginPath();
+                    ctx.moveTo(startShapeX, startShapeY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                }
+            } else if (isPanning) {
+                const dx = e.clientX - startPanX;
+                const dy = e.clientY - startPanY;
+                startPanX = e.clientX;
+                startPanY = e.clientY;
+                console.log(`鼠标正在平移，但画布内容平移需要更复杂的实现。`);
+            }
+        }
+
+        function canvasMouseUp(e) {
+            if (isDrawing) {
+                if (currentTool === 'shape') {
+                    const pos = getMousePos(canvas, e);
+                    restoreCanvasFromHistory();
+                    ctx.beginPath();
+                    ctx.rect(startShapeX, startShapeY, pos.x - startShapeX, pos.y - startShapeY);
+                    ctx.stroke();
+                    saveCanvasState();
+                } else if (currentTool === 'line') {
+                    const pos = getMousePos(canvas, e);
+                    restoreCanvasFromHistory();
+                    ctx.beginPath();
+                    ctx.moveTo(startShapeX, startShapeY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                    saveCanvasState();
+                } else {
+                    ctx.closePath();
+                    saveCanvasState();
+                }
+            } else if (isPanning) {
+                canvas.style.cursor = 'grab';
+            }
+            isDrawing = false;
+            isPanning = false;
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+
+        function handleCanvasClickForText(e) {
+            if (currentTool === 'text') {
+                const pos = getMousePos(canvas, e);
+                textDrawX = pos.x;
+                textDrawY = pos.y;
+                showTextInputOverlay(pos.x, pos.y);
+                console.log("文字工具: 在画布上点击，准备输入文字。");
+            }
+        }
+
+        function showTextInputOverlay(x, y) {
+            const canvasRect = canvas.getBoundingClientRect();
+            textInputOverlay.style.left = `${x + canvasRect.left}px`;
+            textInputOverlay.style.top = `${y + canvasRect.top}px`;
+            textInputOverlay.style.display = 'flex';
+            textInput.value = '';
+            textInput.focus();
+            console.log("文本输入框已显示。");
+        }
+
+        function hideTextInputOverlay() {
+            textInputOverlay.style.display = 'none';
+            console.log("文本输入框已隐藏。");
+        }
+
+        function drawTextOnCanvas() {
+            const text = textInput.value;
+            if (text.trim() !== '') {
+                ctx.fillStyle = currentPenColor;
+                ctx.font = '24px 微软雅黑';
+                ctx.fillText(text, textDrawX, textDrawY);
+                saveCanvasState();
+                console.log(`文字 "${text}" 已绘制到画布。`);
+            }
+            hideTextInputOverlay();
+            selectTool('brush');
+        }
+
+        let isStickerPanelVisible = false;
+
+        function showStickerPanel(isVisible) {
+            const stickerPanel = document.getElementById('stickerPanel');
+            const navItems = document.querySelectorAll('.left-nav-sidebar .nav-item');
+            if (isVisible) {
+                stickerPanel.style.display = 'flex';
+                isStickerPanelVisible = true;
+                navItems.forEach(item => item.classList.remove('active'));
+                document.querySelector('.left-nav-sidebar .nav-item:nth-child(3)').classList.add('active');
+                console.log("贴图面板已显示。");
+            } else {
+                stickerPanel.style.display = 'none';
+                isStickerPanelVisible = false;
+                navItems.forEach(item => item.classList.remove('active'));
+                document.querySelector('.left-nav-sidebar .nav-item:nth-child(1)').classList.add('active');
+                console.log("贴图面板已隐藏。");
+            }
+        }
+
+        function addSticker(stickerSrc) {
+            console.log("添加贴图:", stickerSrc);
+            const img = new Image();
+            img.onload = function() {
+                const stickerSize = Math.min(canvas.width, canvas.height) * 0.2;
+                const x = (canvas.width - stickerSize) / 2;
+                const y = (canvas.height - stickerSize) / 2;
+                ctx.drawImage(img, x, y, stickerSize, stickerSize);
+                saveCanvasState();
+            };
+            img.src = stickerSrc;
+        }
+
+        function saveCanvas() {
+            const dataURL = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = '我的妙绘作品.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            console.log("画布已保存为 '我的妙绘作品.png'。");
+        }
+
+        function handleAllWorks() {
+            console.log("所有作品被点击。这里可以跳转到作品画廊或打开一个作品列表弹窗。");
+            alert("即将展示您的所有作品！(此功能尚未完全实现)");
+        }
+
+        function handleStory() {
+            console.log("故事功能被点击。");
+            alert("故事功能正在开发中！");
+        }
+    </script>
+</body>
+</html>
