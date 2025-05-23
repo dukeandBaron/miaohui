@@ -515,6 +515,9 @@
         const canvasHistory = [];
         let historyIndex = -1;
 
+        // 嵌入部署 URL（根据您的 GitHub Pages 设置）
+        const DEPLOY_URL = "https://dukeandBaron.github.io/miaohui/";
+
         function switchToDraw() {
             console.log("switchToDraw 被调用: 进入主绘板页面。");
             document.getElementById('mainPage').classList.remove('active');
@@ -869,6 +872,8 @@
 
         function handleAllWorks() {
             console.log("所有作品被点击。这里可以跳转到作品画廊或打开一个作品列表弹窗。");
+            // 使用部署 URL 跳转到作品展示页面（假设未来实现）
+            window.location.href = DEPLOY_URL + "works.html"; // 示例，需创建 works.html
             alert("即将展示您的所有作品！(此功能尚未完全实现)");
         }
 
